@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace GTranslatorAPI
 {
@@ -14,7 +15,8 @@ namespace GTranslatorAPI
         Task<Translation?> TranslateAsync(
             Languages sourceLanguage,
             Languages targetLanguage,
-            string text
+            string text,
+            CancellationToken token = default
             );
 
         /// <summary>
@@ -27,7 +29,8 @@ namespace GTranslatorAPI
         Task<Translation?> TranslateFromNamesAsync(
             string sourceLanguageName,
             string targetLanguageName,
-            string text
+            string text,
+            CancellationToken token = default
             );
 
         /// <summary>
@@ -40,7 +43,8 @@ namespace GTranslatorAPI
         Task<Translation?> TranslateAsync(
             string sourceLanguageId,
             string targetLanguageId,
-            string text
+            string text,
+            CancellationToken token = default
             );
     }
 }

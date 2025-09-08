@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GTranslatorAPI
@@ -8,7 +9,7 @@ namespace GTranslatorAPI
     /// <summary>
     /// internal net utils
     /// </summary>
-    internal class NetUtil
+    internal class NetUtil : IDisposable
     {
         /// <summary>
         /// user agent
@@ -23,7 +24,13 @@ namespace GTranslatorAPI
         /// <summary>
         /// build a new instance
         /// </summary>
-        internal NetUtil() { }
+        internal NetUtil()
+        {
+            _client = new() { Timeout = TimeSpan.FromMilliseconds(NetworkQueryTimeout) };
+            _client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+        }
+
+        private HttpClient _client;
 
         /// <summary>
         /// build a new instance from settings
@@ -33,6 +40,8 @@ namespace GTranslatorAPI
         {
             NetworkQueryTimeout = settings.NetworkQueryTimeout;
             UserAgent = settings.UserAgent;
+            _client = new() { Timeout = TimeSpan.FromMilliseconds(NetworkQueryTimeout) };
+            _client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
         }
 
         /// <summary>
@@ -48,46 +57,27 @@ namespace GTranslatorAPI
         /// </summary>
         /// <param name="url">url</param>
         /// <returns>resut|null,status description|error message,null|exception</returns>
-        public async Task<Tuple<string?, string, Exception?>> GetQueryResponseAsync(string url)
+        public async Task<(string?, string, Exception?)> GetQueryResponseAsync(string url, CancellationToken token = default)
         {
             try
             {
-                var q = CreateQuery(url);
-                var rep = await GetResponseAsync(q);
-                return Tuple.Create<string?, string, Exception?>(rep, HttpStatusCode.OK.ToString(), null);
+                var resp = await _client.GetAsync(url, token);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    return (null, resp.StatusCode.ToString(), null);
+                }
+                var body = await resp.Content.ReadAsStringAsync(token);
+                return (body, "OK", null);
             }
             catch (Exception Ex)
             {
-                return Tuple.Create<string?, string, Exception?>(null, Ex.Message, Ex);
+                return (null, Ex.Message, Ex);
             }
         }
 
-        /// <summary>
-        /// async obtain response from query
-        /// </summary>
-        /// <param name="query">query to be performed</param>
-        /// <returns>query stream result</returns>
-        public static async Task<string> GetResponseAsync(HttpWebRequest query)
+        public void Dispose()
         {
-            using var client = new HttpClient();
-            var content = await client.GetStringAsync(query.RequestUri.AbsoluteUri);
-            return content;
+            ((IDisposable)_client).Dispose();
         }
-
-        /// <summary>
-        /// get http get query object
-        /// </summary>
-        /// <param name="uri">target uri</param>
-        /// <returns>web request</returns>
-        public HttpWebRequest CreateQuery(string uri)
-        {
-            var u = new Uri(uri);
-            var query = (HttpWebRequest)WebRequest.Create(u);
-            query.UserAgent = UserAgent;
-            query.KeepAlive = false;
-            query.Timeout = NetworkQueryTimeout;
-            return query;
-        }
-
     }
 }

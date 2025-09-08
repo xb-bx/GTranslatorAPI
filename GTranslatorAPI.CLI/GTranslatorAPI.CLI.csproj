@@ -11,10 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-	  <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\GTranslatorAPI\GTranslatorAPI.csproj" />
   </ItemGroup>
 
@@ -22,14 +18,14 @@
 	<Nullable>enable</Nullable>
 	  
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <PackageId>GTranslatorAPI.CLI</PackageId>
     <Version>2.0.0</Version>
     <Authors>Franck Gaspoz</Authors>
     <Company>franck.gaspoz@gmail.com</Company>
     <PackageDescription>Google Translate API CLI - .NET Core 5</PackageDescription>
 	<Description>Google Translate API Client CLI Console Application C#</Description>
-	<PackageReleaseNotes>.NET Core 5 migration</PackageReleaseNotes>
+	<PackageReleaseNotes>.NET Core 9 migration</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/franck-gaspoz/GTranslatorAPI.git</RepositoryUrl>
     <RepositoryType>GIT</RepositoryType>

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace GTranslatorAPI
 {
@@ -43,7 +42,8 @@ namespace GTranslatorAPI
         public async Task<Translation?> TranslateAsync(
             Languages sourceLanguage,
             Languages targetLanguage,
-            string text
+            string text,
+            CancellationToken token = default
             )
         {
             IEnumerable<string> splits;
@@ -57,7 +57,7 @@ namespace GTranslatorAPI
             // parallelized segments translation
             IEnumerable<Task<Translation>> trTasksQuery =
                 splits.Select(textSplit => RunTranslateQueryAsync(
-                    sourceLanguage, targetLanguage, textSplit));
+                    sourceLanguage, targetLanguage, textSplit, token));
 
             var trTasks = trTasksQuery.ToArray();
             await Task.WhenAll(trTasks);
@@ -123,23 +123,21 @@ namespace GTranslatorAPI
         async Task<Translation> RunTranslateQueryAsync(
             Languages sourceLanguage,
             Languages targetLanguage,
-            string text
+            string text,
+            CancellationToken token
             )
         {
             var q = BuildServiceUriPathAndQuery(text, sourceLanguage, targetLanguage);
-            var r = await _net.GetQueryResponseAsync(q);
+            var r = await _net.GetQueryResponseAsync(q, token);
             if (!string.IsNullOrWhiteSpace(r.Item1))
             {
-                if (JsonConvert.DeserializeObject(r.Item1) is JArray o)
+                var doc = JsonDocument.Parse(r.Item1);
+                if (doc.RootElement.ValueKind is JsonValueKind.Array)
                 {
                     try
                     {
-#pragma warning disable CS8602
-#pragma warning disable CS8604
-                        var translatedText = o[0][0][0].Value<string>();
-                        var originalText = o[0][0][1].Value<string>();
-#pragma warning restore CS8602
-#pragma warning restore CS8604
+                        var translatedText = doc.RootElement.EnumerateArray().ElementAt(0).EnumerateArray().ElementAt(0).EnumerateArray().ElementAt(0).GetString();
+                        var originalText = doc.RootElement.EnumerateArray().ElementAt(0).EnumerateArray().ElementAt(0).EnumerateArray().ElementAt(1).GetString();
                         return new Translation()
                         {
                             TranslatedText = translatedText,
@@ -148,7 +146,7 @@ namespace GTranslatorAPI
                     }
                     catch (Exception Ex)
                     {
-                        throw new TranslateException($"translate error: '{Ex.Message}': invalid result: {o}", Ex);
+                        throw new TranslateException($"translate error: '{Ex.Message}'", Ex);
                     }
                 }
             }
@@ -186,7 +184,8 @@ namespace GTranslatorAPI
         public async Task<Translation?> TranslateFromNamesAsync(
             string sourceLanguageName,
             string targetLanguageName,
-            string text
+            string text,
+            CancellationToken token
             )
         {
             var srcLng = LanguagesUtil.GetLanguageCode(sourceLanguageName);
@@ -209,7 +208,8 @@ namespace GTranslatorAPI
         public async Task<Translation?> TranslateAsync(
             string sourceLanguageId,
             string targetLanguageId,
-            string text
+            string text,
+            CancellationToken token = default
             )
         {
             var srcLng = LanguagesUtil.GetLanguageCodeFromLanguageId(sourceLanguageId);
@@ -219,7 +219,8 @@ namespace GTranslatorAPI
             return await TranslateAsync(
                 (Languages)srcLng!,
                 (Languages)tgtLng!,
-                text);
+                text, 
+                token);
         }
 
         /// <summary>
